@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "cgsj-dts",
+    "slug": "cgsj-dts",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/sjc.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/sjc.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/sjc.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.bryanprog.cgsjdts"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "85b30453-788b-444f-8a70-ed7b0b6511b9"
+      }
+    }
+  }
+}
