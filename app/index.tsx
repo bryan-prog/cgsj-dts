@@ -47,9 +47,7 @@ export default function LoginScreen() {
     }
   }, [error]);
 
-  const handleLoginDummy = ()=>{
-    return router.push('/home'); 
-  }
+
 
   async function handleLogin() {
     if (!username || !password) {
@@ -78,9 +76,9 @@ export default function LoginScreen() {
 
    
         if (response.data.redirect_to === 'mayors_page') {
-          router.push('/mayors_page'); 
+          router.replace('/mayors_page'); 
         } else {
-          router.push('/home'); 
+          router.replace('/home'); 
         }
       } else {
         setError('Login failed. No token received.');

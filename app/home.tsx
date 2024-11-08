@@ -1,20 +1,104 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, DrawerLayoutAndroid, Image, Dimensions, ActivityIndicator, Alert, ImageBackground } from 'react-native';
-import { MaterialCommunityIcons } from 'react-native-vector-icons';  
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  DrawerLayoutAndroid,
+  Image,
+  Dimensions,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { MaterialCommunityIcons } from 'react-native-vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Profile from './users/profile';
 import ListOfUsers from './users/list-of-users';
+import Register from './users/register';
 
-const { width: screenWidth } = Dimensions.get('window');  
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function Dashboard() {
   const router = useRouter();
   const [drawer, setDrawer] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [countsLoading, setCountsLoading] = useState(false);
   const [showUserSubMenu, setShowUserSubMenu] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard'); 
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [counts, setCounts] = useState({
+    released: 0,
+    pending: 0,
+    incoming: 0,
+    received: 0,
+    draft: 0,
+    terminal: 0,
+  });
+
+  // State variable to hold user data
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      setCountsLoading(true);
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        if (!token) {
+          Alert.alert('Error', 'No authentication token found.');
+          return;
+        }
+        const response = await axios.get(
+          'http://dts.sanjuancity.gov.ph/api/home',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        setCounts(response.data);
+      } catch (error) {
+        console.log('Error fetching counts:', error);
+        Alert.alert('Error', 'Failed to fetch counts.');
+      } finally {
+        setCountsLoading(false);
+      }
+    };
+
+    fetchCounts();
+  }, []);
+
+  // Fetch the logged-in user's data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        if (!token) {
+          Alert.alert('Error', 'No authentication token found.');
+          return;
+        }
+        const response = await axios.get(
+          'http://dts.sanjuancity.gov.ph/api/user', 
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        setUserData(response.data);
+      } catch (error) {
+        console.log('Error fetching user data:', error);
+        Alert.alert('Error', 'Failed to fetch user data.');
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   async function handleLogout() {
     setLoading(true);
@@ -23,13 +107,17 @@ export default function Dashboard() {
       console.log('Logout token:', token);
 
       if (token) {
-        const response = await axios.post('http://dts.sanjuancity.gov.ph/api/logout', {}, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-        });
+        const response = await axios.post(
+          'http://dts.sanjuancity.gov.ph/api/logout',
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
 
         console.log('Response status', response.status);
         console.log('Response headers', response.config.headers);
@@ -43,7 +131,11 @@ export default function Dashboard() {
       console.log('Logout error:', error);
       if (error.response) {
         console.log('API error:', error.response.data);
-        Alert.alert('Logout Failed', error.response.data.message || 'An error occurred during logout.');
+        Alert.alert(
+          'Logout Failed',
+          error.response.data.message ||
+            'An error occurred during logout.'
+        );
       } else {
         Alert.alert('Logout Failed', 'An error occurred. Please try again.');
       }
@@ -53,106 +145,152 @@ export default function Dashboard() {
   }
 
   const renderContent = () => {
+    if (countsLoading) {
+      return (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#0000ff" />
+        </View>
+      );
+    }
+
     switch (activeTab) {
       case 'dashboard':
         return (
           <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.card}>
-            <View>
-              <Text style={styles.cardTitle}>RELEASED</Text>
-              <Text style={styles.cardCount}>14</Text>
-              <Text style={styles.cardSubtitle}>Last Updated</Text>
-            </View>
-            <View style={[styles.iconBackground, { backgroundColor: '#FD3A4A' }]}>
-              <MaterialCommunityIcons name="folder" size={40} color="#fff" />
-            </View>
-          </View>
-
-    
-          <View style={styles.card}>
-            <View>
-              <Text style={styles.cardTitle}>FOR RELEASE</Text>
-              <Text style={styles.cardCount}>1</Text>
-              <Text style={styles.cardSubtitle}>Last Updated</Text>
-            </View>
-            <View style={[styles.iconBackground, { backgroundColor: '#FFA726' }]}>
-              <MaterialCommunityIcons
-                name="cloud-upload"
-                size={40}
-                color="#fff"
-              />
-            </View>
-          </View>
-
-
-          <View style={styles.card}>
-            <View>
-              <Text style={styles.cardTitle}>INCOMING</Text>
-              <Text style={styles.cardCount}>7</Text>
-              <Text style={styles.cardSubtitle}>Last Updated</Text>
-            </View>
-            <View style={[styles.iconBackground, { backgroundColor: '#43A047' }]}>
-              <MaterialCommunityIcons
-                name="inbox-arrow-down"
-                size={40}
-                color="#fff"
-              />
-            </View>
-          </View>
-
           
-          <View style={styles.card}>
-            <View>
-              <Text style={styles.cardTitle}>RECEIVED</Text>
-              <Text style={styles.cardCount}>15</Text>
-              <Text style={styles.cardSubtitle}>Last Updated</Text>
+            <View style={styles.card}>
+              <View>
+                <Text style={styles.cardTitle}>RELEASED</Text>
+                <Text style={styles.cardCount}>{counts.released}</Text>
+                <Text style={styles.cardSubtitle}>Last Updated</Text>
+              </View>
+              <View
+                style={[
+                  styles.iconBackground,
+                  { backgroundColor: '#FD3A4A' },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="folder"
+                  size={40}
+                  color="#fff"
+                />
+              </View>
             </View>
-            <View style={[styles.iconBackground, { backgroundColor: '#1E88E5' }]}>
-              <MaterialCommunityIcons name="inbox" size={40} color="#fff" />
-            </View>
-          </View>
 
-         
-          <View style={styles.card}>
-            <View>
-              <Text style={styles.cardTitle}>TERMINAL</Text>
-              <Text style={styles.cardCount}>6</Text>
-              <Text style={styles.cardSubtitle}>Last Updated</Text>
+            <View style={styles.card}>
+              <View>
+                <Text style={styles.cardTitle}>FOR RELEASE</Text>
+                <Text style={styles.cardCount}>{counts.pending}</Text>
+                <Text style={styles.cardSubtitle}>Last Updated</Text>
+              </View>
+              <View
+                style={[
+                  styles.iconBackground,
+                  { backgroundColor: '#FFA726' },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="cloud-upload"
+                  size={40}
+                  color="#fff"
+                />
+              </View>
             </View>
-            <View style={[styles.iconBackground, { backgroundColor: '#923CB5' }]}>
-              <MaterialCommunityIcons
-                name="check-bold"
-                size={40}
-                color="#fff"
-              />
-            </View>
-          </View>
 
-          <View style={styles.card}>
-            <View>
-              <Text style={styles.cardTitle}>DRAFTS</Text>
-              <Text style={styles.cardCount}>15</Text>
-              <Text style={styles.cardSubtitle}>Last Updated</Text>
+            <View style={styles.card}>
+              <View>
+                <Text style={styles.cardTitle}>INCOMING</Text>
+                <Text style={styles.cardCount}>{counts.incoming}</Text>
+                <Text style={styles.cardSubtitle}>Last Updated</Text>
+              </View>
+              <View
+                style={[
+                  styles.iconBackground,
+                  { backgroundColor: '#43A047' },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="inbox-arrow-down"
+                  size={40}
+                  color="#fff"
+                />
+              </View>
             </View>
-            <View style={[styles.iconBackground, { backgroundColor: '#FD3A4A' }]}>
-              <MaterialCommunityIcons name="file-outline" size={40} color="#fff" />
-            </View>
-          </View>
 
+            <View style={styles.card}>
+              <View>
+                <Text style={styles.cardTitle}>RECEIVED</Text>
+                <Text style={styles.cardCount}>{counts.received}</Text>
+                <Text style={styles.cardSubtitle}>Last Updated</Text>
+              </View>
+              <View
+                style={[
+                  styles.iconBackground,
+                  { backgroundColor: '#1E88E5' },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="inbox"
+                  size={40}
+                  color="#fff"
+                />
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <View>
+                <Text style={styles.cardTitle}>TERMINAL</Text>
+                <Text style={styles.cardCount}>{counts.terminal}</Text>
+                <Text style={styles.cardSubtitle}>Last Updated</Text>
+              </View>
+              <View
+                style={[
+                  styles.iconBackground,
+                  { backgroundColor: '#923CB5' },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="check-bold"
+                  size={40}
+                  color="#fff"
+                />
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <View>
+                <Text style={styles.cardTitle}>DRAFTS</Text>
+                <Text style={styles.cardCount}>{counts.draft}</Text>
+                <Text style={styles.cardSubtitle}>Last Updated</Text>
+              </View>
+              <View
+                style={[
+                  styles.iconBackground,
+                  { backgroundColor: '#FD3A4A' },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="file-outline"
+                  size={40}
+                  color="#fff"
+                />
+              </View>
+            </View>
           </ScrollView>
         );
       case 'profile':
-        return <Profile/>
-      
+        return <Profile />;
+      case 'register':
+        return <Register />;
       case 'settings':
         return (
           <View style={styles.centered}>
             <Text style={styles.text}>Settings Screen</Text>
           </View>
         );
-
       case 'list-of-users':
-        return <ListOfUsers/>
+        return <ListOfUsers />;
       default:
         return null;
     }
@@ -160,16 +298,37 @@ export default function Dashboard() {
 
   const renderBottomNavBar = () => (
     <View style={styles.bottomNavBar}>
-      <TouchableOpacity onPress={() => setActiveTab('dashboard')} style={styles.navBarItem}>
-        <MaterialCommunityIcons name="home" size={30} color={activeTab === 'dashboard' ? '#FFD700' : '#000'} />
+      <TouchableOpacity
+        onPress={() => setActiveTab('dashboard')}
+        style={styles.navBarItem}
+      >
+        <MaterialCommunityIcons
+          name="home"
+          size={30}
+          color={activeTab === 'dashboard' ? '#FFD700' : '#000'}
+        />
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => setActiveTab('profile')} style={styles.navBarItem}>
-        <MaterialCommunityIcons name="account" size={30} color={activeTab === 'profile' ? '#FFD700' : '#000'} />
+      <TouchableOpacity
+        onPress={() => setActiveTab('profile')}
+        style={styles.navBarItem}
+      >
+        <MaterialCommunityIcons
+          name="account"
+          size={30}
+          color={activeTab === 'profile' ? '#FFD700' : '#000'}
+        />
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => setActiveTab('settings')} style={styles.navBarItem}>
-        <MaterialCommunityIcons name="file-cog" size={30} color={activeTab === 'settings' ? '#FFD700' : '#000'} />
+      <TouchableOpacity
+        onPress={() => setActiveTab('settings')}
+        style={styles.navBarItem}
+      >
+        <MaterialCommunityIcons
+          name="file"
+          size={30}
+          color={activeTab === 'settings' ? '#FFD700' : '#000'}
+        />
       </TouchableOpacity>
     </View>
   );
@@ -182,87 +341,151 @@ export default function Dashboard() {
           style={styles.logoImage}
         />
       </View>
-    
+
       <View style={styles.menuItems}>
-        <TouchableOpacity style={styles.menuItem}  onPress={()=> {
-          setActiveTab('dashboard')
-          drawer.closeDrawer(); 
-        }}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => {
+            setActiveTab('dashboard');
+            drawer.closeDrawer();
+          }}
+        >
           <View style={styles.menuItemContent}>
-            <MaterialCommunityIcons name="view-dashboard" size={20} color="#000080" />
+            <MaterialCommunityIcons
+              name="view-dashboard"
+              size={20}
+              color="#000080"
+            />
             <Text style={styles.menuText}>Dashboard</Text>
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} >
+       
+        <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
-            <MaterialCommunityIcons name="folder" size={20} color="#228B22" />
+            <MaterialCommunityIcons
+              name="folder"
+              size={20}
+              color="#228B22"
+            />
             <Text style={styles.menuText}>Documents</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
-            <MaterialCommunityIcons name="calendar-clock" size={20} color="#FF4500" />
+            <MaterialCommunityIcons
+              name="calendar-clock"
+              size={20}
+              color="#FF4500"
+            />
             <Text style={styles.menuText}>Pending for Release</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
-            <MaterialCommunityIcons name="inbox-arrow-down" size={20} color="#B22222" />
+            <MaterialCommunityIcons
+              name="inbox-arrow-down"
+              size={20}
+              color="#B22222"
+            />
             <Text style={styles.menuText}>Incoming Documents</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
-            <MaterialCommunityIcons name="check-box-outline" size={20} color="#FF8C00" />
+            <MaterialCommunityIcons
+              name="check-box-outline"
+              size={20}
+              color="#FF8C00"
+            />
             <Text style={styles.menuText}>Tagged as Terminal</Text>
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() =>{
-          setActiveTab('profile');
-          drawer.closeDrawer(); 
-        }}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => {
+            setActiveTab('profile');
+            drawer.closeDrawer();
+          }}
+        >
           <View style={styles.menuItemContent}>
-            <MaterialCommunityIcons name="account" size={20} color="#1E90FF" />
+            <MaterialCommunityIcons
+              name="account"
+              size={20}
+              color="#1E90FF"
+            />
             <Text style={styles.menuText}>My Profile</Text>
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => setShowUserSubMenu(!showUserSubMenu)}>
-          <View style={styles.menuItemContent}>
-            <MaterialCommunityIcons name="account-multiple-plus" size={20} color="#1E90FF" />
-            <Text style={styles.menuText}>List / Register User</Text>
-          </View>
-          <MaterialCommunityIcons name={showUserSubMenu ? "chevron-up" : "chevron-down"} size={20} color="#fff" />
-        </TouchableOpacity>
+        
+        {userData && userData.user_level === 'Super Admin' && (
+          <>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setShowUserSubMenu(!showUserSubMenu)}
+            >
+              <View style={styles.menuItemContent}>
+                <MaterialCommunityIcons
+                  name="account-multiple-plus"
+                  size={20}
+                  color="#1E90FF"
+                />
+                <Text style={styles.menuText}>List / Register User</Text>
+              </View>
+              <MaterialCommunityIcons
+                name={showUserSubMenu ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#fff"
+              />
+            </TouchableOpacity>
 
-        {showUserSubMenu && (
-          <View style={styles.subMenu}>
-            <TouchableOpacity style={styles.subMenuItem} onPress={() =>{
-              setActiveTab('list-of-users');
-              drawer.closeDrawer(); 
-            }}>
-              <Text style={styles.subMenuText}>List of Users</Text>
+            {showUserSubMenu && (
+              <View style={styles.subMenu}>
+                <TouchableOpacity
+                  style={styles.subMenuItem}
+                  onPress={() => {
+                    setActiveTab('list-of-users');
+                    drawer.closeDrawer();
+                  }}
+                >
+                  <Text style={styles.subMenuText}>List of Users</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.subMenuItem}
+                  onPress={() => {
+                    setActiveTab('register');
+                    drawer.closeDrawer();
+                  }}
+                >
+                  <Text style={styles.subMenuText}>Register User</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.menuItem}>
+              <View style={styles.menuItemContent}>
+                <MaterialCommunityIcons
+                  name="qrcode"
+                  size={20}
+                  color="#FF6347"
+                />
+                <Text style={styles.menuText}>QR Manager</Text>
+              </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.subMenuItem} onPress={() => router.push('/')}>
-              <Text style={styles.subMenuText}>Register User</Text>
-            </TouchableOpacity>
-          </View>
+          </>
         )}
-
-        <TouchableOpacity style={styles.menuItem}>
-          <View style={styles.menuItemContent}>
-            <MaterialCommunityIcons name="qrcode" size={20} color="#FF6347" />
-            <Text style={styles.menuText}>QR Manager</Text>
-          </View>
-        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={loading}>
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={handleLogout}
+        disabled={loading}
+      >
         {loading ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
@@ -273,12 +496,11 @@ export default function Dashboard() {
         )}
       </TouchableOpacity>
     </View>
-
   );
 
   return (
     <DrawerLayoutAndroid
-      ref={(drawer) => setDrawer(drawer)}
+      ref={(drawerRef) => setDrawer(drawerRef)}
       drawerWidth={250}
       drawerPosition="left"
       renderNavigationView={navigationView}
@@ -291,23 +513,15 @@ export default function Dashboard() {
 
           <View style={styles.navbarImages}>
             <Image
-              source={require("../assets/images/bagong-pilipinas.png")}
+              source={require('../assets/images/bagong-pilipinas.png')}
               style={styles.navbarImage}
             />
             <Image
-              source={require("../assets/images/sjc.png")}
+              source={require('../assets/images/sjc.png')}
               style={styles.navbarImage}
             />
           </View>
         </View>
-
-        {/* <ImageBackground
-          source={require('../assets/images/sjc.png')} 
-          style={styles.backgroundImage}
-          imageStyle={{ opacity: 0.2 }}
-        >
-          {renderContent()}
-        </ImageBackground> */}
 
         {renderContent()}
         {renderBottomNavBar()}
@@ -409,13 +623,14 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     flex: 1,
-    padding: 20,
+    padding: 22,
     backgroundColor: '#2E3B55',
     justifyContent: 'space-between',
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 50,
+
   },
   logoImage: {
     width: 150,
