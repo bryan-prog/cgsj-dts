@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,19 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  Animated,
+  Easing,
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { AntDesign } from '@expo/vector-icons';
-import { useFonts, OpenSans_400Regular } from '@expo-google-fonts/open-sans';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
+import {
+  useFonts,
+  OpenSans_400Regular,
+  OpenSans_700Bold,
+} from '@expo-google-fonts/open-sans';
+import Tooltip from './tooltip'
 
 interface User {
   id: number;
@@ -99,10 +106,14 @@ export default function ListOfUsers() {
   const [activeStatusOpen, setActiveStatusOpen] = useState(false);
   const [activeStatusValue, setActiveStatusValue] = useState<string>('');
 
-  // Load Open Sans font
   const [fontsLoaded] = useFonts({
     OpenSans_400Regular,
+    OpenSans_700Bold,
   });
+
+
+  const modalScaleAnim = useRef(new Animated.Value(0)).current;
+  const modalOpacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -111,7 +122,28 @@ export default function ListOfUsers() {
     }
   }, [fontsLoaded]);
 
-  // Fetch users from the API
+  useEffect(() => {
+    if (showSuccessModal) {
+      Animated.parallel([
+        Animated.timing(modalScaleAnim, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(modalOpacityAnim, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      modalScaleAnim.setValue(0);
+      modalOpacityAnim.setValue(0);
+    }
+  }, [showSuccessModal]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -122,7 +154,7 @@ export default function ListOfUsers() {
       }
 
       const response = await axios.get(
-        `http://dts.sanjuancity.gov.ph/api/list-user`,
+        `http://192.168.0.50:8000/api/list-user`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`,
@@ -130,7 +162,7 @@ export default function ListOfUsers() {
         }
       );
 
-      const usersData = response.data.users; 
+      const usersData = response.data.users;
       setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -140,17 +172,16 @@ export default function ListOfUsers() {
     }
   };
 
-  
   const fetchDepartments = async () => {
     try {
       const authToken = await AsyncStorage.getItem('authToken');
-      
+
       if (!authToken) {
         throw new Error('No authorization token found');
       }
 
       const response = await axios.get(
-        'http://dts.sanjuancity.gov.ph/api/department',
+        'http://192.168.0.50:8000/api/department',
         {
           headers: {
             Authorization: `Bearer ${authToken}`,
@@ -161,10 +192,12 @@ export default function ListOfUsers() {
       );
 
       const departmentsData = response.data.office;
-      const departmentsArray = Object.values(departmentsData).map((dept: any) => ({
-        label: dept.dept_description,
-        value: dept.dept_code,
-      }));
+      const departmentsArray = Object.values(departmentsData).map(
+        (dept: any) => ({
+          label: dept.dept_description,
+          value: dept.dept_code,
+        })
+      );
       setDepartments(departmentsArray);
       setDepartmentItems(departmentsArray);
     } catch (error) {
@@ -188,7 +221,23 @@ export default function ListOfUsers() {
     setFormErrors({ ...formErrors, [name]: undefined });
   };
 
-  // Updated filteredUsers for enhanced search functionality
+  
+  function validateFormData(formData: FormData): FormErrors {
+    const errors: FormErrors = {};
+    if (!formData.name) errors.name = ['First name is required.'];
+    if (!formData.last_name) errors.last_name = ['Last name is required.'];
+    if (!formData.designation)
+      errors.designation = ['Designation is required.'];
+    if (!formData.contact) errors.contact = ['Contact number is required.'];
+    if (!formData.username) errors.username = ['Username is required.'];
+    if (!formData.office_dept)
+      errors.office_dept = ['Assigned office is required.'];
+    if (!formData.user_level)
+      errors.user_level = ['User level is required.'];
+    
+    return errors;
+  }
+
   const filteredUsers = users.filter((user) => {
     const searchTerm = search.toLowerCase();
 
@@ -235,7 +284,9 @@ export default function ListOfUsers() {
       <Text style={styles.cell}>{item.office_dept}</Text>
       <Text style={styles.cell}>{item.designation || 'N/A'}</Text>
       <Text style={styles.cell}>{item.username}</Text>
-      <Text style={styles.cell}>{item.active === '1' ? 'Active' : 'Inactive'}</Text>
+      <Text style={styles.cell}>
+        {item.active === '1' ? 'Active' : 'Inactive'}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -284,6 +335,13 @@ export default function ListOfUsers() {
   };
 
   const handleSaveUser = async () => {
+    
+    const errors = validateFormData(formData);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
     try {
       setLoading(true);
       const authToken = await AsyncStorage.getItem('authToken');
@@ -292,7 +350,7 @@ export default function ListOfUsers() {
       }
 
       const response = await axios.post(
-        'http://dts.sanjuancity.gov.ph/api/edit-user',
+        'http://192.168.0.50:8000/api/edit-user',
         formData,
         {
           headers: {
@@ -302,7 +360,7 @@ export default function ListOfUsers() {
           },
         }
       );
-       
+
       const updatedUser = response.data.user;
 
       const updatedUsers = users.map((user) =>
@@ -325,7 +383,6 @@ export default function ListOfUsers() {
     }
   };
 
-  
   const generatePageNumbers = () => {
     const pageNumbers = [];
     const totalNumbers = 5; 
@@ -341,8 +398,7 @@ export default function ListOfUsers() {
     if (currentPage + halfTotalNumbers >= totalPages) {
       startPage = totalPages - totalNumbers + 1;
     }
-  
-   
+
     startPage = Math.max(startPage, 2);
     endPage = Math.min(endPage, totalPages - 1);
 
@@ -369,7 +425,6 @@ export default function ListOfUsers() {
 
   const pageNumbers = generatePageNumbers();
 
-
   if (!fontsLoaded) {
     return <ActivityIndicator size="large" color="#2A47CB" />;
   }
@@ -380,7 +435,7 @@ export default function ListOfUsers() {
       <TouchableOpacity
         style={[
           styles.editUserButton,
-          { backgroundColor: selectedUserId ? '#2A47CB' : '#ccc' },
+          { backgroundColor: selectedUserId ? '#8B0000' : '#ccc' },
         ]}
         onPress={handleEditUser}
         disabled={!selectedUserId}
@@ -427,7 +482,6 @@ export default function ListOfUsers() {
         </ScrollView>
       )}
 
-    
       <View style={styles.paginationContainer}>
         <TouchableOpacity
           onPress={handlePreviousPage}
@@ -440,9 +494,7 @@ export default function ListOfUsers() {
           <AntDesign
             name="left"
             size={20}
-            color={
-              currentPage === 1 || totalPages === 0 ? '#ccc' : '#2A47CB'
-            }
+            color={currentPage === 1 || totalPages === 0 ? '#ccc' : '#2A47CB'}
           />
         </TouchableOpacity>
 
@@ -500,7 +552,6 @@ export default function ListOfUsers() {
         </TouchableOpacity>
       </View>
 
-      {/* Edit User Modal */}
       {showEditModal && (
         <Modal
           animationType="fade"
@@ -515,160 +566,268 @@ export default function ListOfUsers() {
               <ScrollView>
                 <Text style={styles.modalTitle}>Edit User</Text>
 
-                {/* Form fields */}
                 {/* First Name */}
                 <Text style={styles.label}>First Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="First Name"
-                  value={formData.name}
-                  onChangeText={(text) => handleInputChange('name', text)}
-                />
-                {formErrors.name && (
-                  <Text style={styles.errorText}>{formErrors.name[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={[styles.input, formErrors.name && styles.inputError]}
+                    placeholder="First Name"
+                    placeholderTextColor="#7C7C7C"
+                    value={formData.name}
+                    onChangeText={(text) => handleInputChange('name', text)}
+                  />
+                  {formErrors.name && (
+                    <Tooltip message={formErrors.name[0]}>
+                      <TouchableOpacity style={styles.errorIconContainer}>
+                        <AntDesign
+                          name="exclamationcircleo"
+                          size={20}
+                          color="red"
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
+                  )}
+                </View>
 
-             
+              
                 <Text style={styles.label}>Middle Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Middle Name"
-                  value={formData.middle_name}
-                  onChangeText={(text) => handleInputChange('middle_name', text)}
-                />
-                {formErrors.middle_name && (
-                  <Text style={styles.errorText}>{formErrors.middle_name[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Middle Name"
+                    placeholderTextColor="#7C7C7C"
+                    value={formData.middle_name}
+                    onChangeText={(text) =>
+                      handleInputChange('middle_name', text)
+                    }
+                  />
+                </View>
 
-                
+                {/* Last Name */}
                 <Text style={styles.label}>Last Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Last Name"
-                  value={formData.last_name}
-                  onChangeText={(text) => handleInputChange('last_name', text)}
-                />
-                {formErrors.last_name && (
-                  <Text style={styles.errorText}>{formErrors.last_name[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      formErrors.last_name && styles.inputError,
+                    ]}
+                    placeholder="Last Name"
+                    placeholderTextColor="#7C7C7C"
+                    value={formData.last_name}
+                    onChangeText={(text) =>
+                      handleInputChange('last_name', text)
+                    }
+                  />
+                  {formErrors.last_name && (
+                    <Tooltip message={formErrors.last_name[0]}>
+                      <TouchableOpacity style={styles.errorIconContainer}>
+                        <AntDesign
+                          name="exclamationcircleo"
+                          size={20}
+                          color="red"
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
+                  )}
+                </View>
 
-                
+                {/* Suffix */}
                 <Text style={styles.label}>Suffix</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Suffix"
-                  value={formData.suffix}
-                  onChangeText={(text) => handleInputChange('suffix', text)}
-                />
-                {formErrors.suffix && (
-                  <Text style={styles.errorText}>{formErrors.suffix[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Suffix"
+                    placeholderTextColor="#7C7C7C"
+                    value={formData.suffix}
+                    onChangeText={(text) => handleInputChange('suffix', text)}
+                  />
+                </View>
 
-                
+                {/* Assigned Office/Department */}
                 <Text style={styles.label}>Assigned Office/Department</Text>
-                <DropDownPicker
-                  open={departmentOpen}
-                  value={departmentValue}
-                  items={departmentItems}
-                  setOpen={setDepartmentOpen}
-                  setValue={(callback) => {
-                    const value = callback(departmentValue);
-                    setDepartmentValue(value);
-                    handleInputChange('office_dept', value);
-                  }}
-                  setItems={setDepartmentItems}
-                  searchable
-                  listMode="MODAL"
-                  placeholder="Select Department"
-                  style={styles.dropdown}
-                  dropDownContainerStyle={styles.dropdownContainer}
-                />
-                {formErrors.office_dept && (
-                  <Text style={styles.errorText}>{formErrors.office_dept[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <DropDownPicker
+                    open={departmentOpen}
+                    value={departmentValue}
+                    items={departmentItems}
+                    setOpen={setDepartmentOpen}
+                    setValue={(callback) => {
+                      const value = callback(departmentValue);
+                      setDepartmentValue(value);
+                      handleInputChange('office_dept', value);
+                    }}
+                    setItems={setDepartmentItems}
+                    searchable
+                    listMode="MODAL"
+                    placeholder="Select Department"
+                    style={[
+                      styles.dropdown,
+                      formErrors.office_dept && styles.inputError,
+                    ]}
+                    dropDownContainerStyle={styles.dropdownContainer}
+                    placeholderStyle={styles.placeholderStyle}
+                    textStyle={styles.textStyle}
+                  />
+                  {formErrors.office_dept && (
+                    <Tooltip message={formErrors.office_dept[0]}>
+                      <TouchableOpacity style={styles.errorIconContainer}>
+                        <AntDesign
+                          name="exclamationcircleo"
+                          size={20}
+                          color="red"
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
+                  )}
+                </View>
 
-                
+                {/* Designation */}
                 <Text style={styles.label}>Designation</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Designation"
-                  value={formData.designation}
-                  onChangeText={(text) => handleInputChange('designation', text)}
-                />
-                {formErrors.designation && (
-                  <Text style={styles.errorText}>{formErrors.designation[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      formErrors.designation && styles.inputError,
+                    ]}
+                    placeholder="Designation"
+                    placeholderTextColor="#7C7C7C"
+                    value={formData.designation}
+                    onChangeText={(text) =>
+                      handleInputChange('designation', text)
+                    }
+                  />
+                  {formErrors.designation && (
+                    <Tooltip message={formErrors.designation[0]}>
+                      <TouchableOpacity style={styles.errorIconContainer}>
+                        <AntDesign
+                          name="exclamationcircleo"
+                          size={20}
+                          color="red"
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
+                  )}
+                </View>
 
                 {/* Contact */}
                 <Text style={styles.label}>Contact</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Contact Number"
-                  value={formData.contact}
-                  onChangeText={(text) => handleInputChange('contact', text)}
-                />
-                {formErrors.contact && (
-                  <Text style={styles.errorText}>{formErrors.contact[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      formErrors.contact && styles.inputError,
+                    ]}
+                    placeholder="Contact Number"
+                    placeholderTextColor="#7C7C7C"
+                    value={formData.contact}
+                    onChangeText={(text) => handleInputChange('contact', text)}
+                  />
+                  {formErrors.contact && (
+                    <Tooltip message={formErrors.contact[0]}>
+                      <TouchableOpacity style={styles.errorIconContainer}>
+                        <AntDesign
+                          name="exclamationcircleo"
+                          size={20}
+                          color="red"
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
+                  )}
+                </View>
 
                 {/* Username */}
                 <Text style={styles.label}>Username</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Username"
-                  value={formData.username}
-                  onChangeText={(text) => handleInputChange('username', text)}
-                />
-                {formErrors.username && (
-                  <Text style={styles.errorText}>{formErrors.username[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      formErrors.username && styles.inputError,
+                    ]}
+                    placeholder="Username"
+                    placeholderTextColor="#7C7C7C"
+                    value={formData.username}
+                    onChangeText={(text) =>
+                      handleInputChange('username', text)
+                    }
+                  />
+                  {formErrors.username && (
+                    <Tooltip message={formErrors.username[0]}>
+                      <TouchableOpacity style={styles.errorIconContainer}>
+                        <AntDesign
+                          name="exclamationcircleo"
+                          size={20}
+                          color="red"
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
+                  )}
+                </View>
 
                 {/* User Level */}
                 <Text style={styles.label}>User Level</Text>
-                <DropDownPicker
-                  open={userLevelOpen}
-                  value={userLevelValue}
-                  items={userLevelItems}
-                  setOpen={setUserLevelOpen}
-                  setValue={(callback) => {
-                    const value = callback(userLevelValue);
-                    setUserLevelValue(value);
-                    handleInputChange('user_level', value);
-                  }}
-                  listMode="SCROLLVIEW"
-                  placeholder="Select User Level"
-                  style={styles.dropdown}
-                  dropDownContainerStyle={styles.dropdownContainer}
-                />
-                {formErrors.user_level && (
-                  <Text style={styles.errorText}>{formErrors.user_level[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <DropDownPicker
+                    open={userLevelOpen}
+                    value={userLevelValue}
+                    items={userLevelItems}
+                    setOpen={setUserLevelOpen}
+                    setValue={(callback) => {
+                      const value = callback(userLevelValue);
+                      setUserLevelValue(value);
+                      handleInputChange('user_level', value);
+                    }}
+                    listMode="SCROLLVIEW"
+                    placeholder="Select User Level"
+                    style={[
+                      styles.dropdown,
+                      formErrors.user_level && styles.inputError,
+                    ]}
+                    dropDownContainerStyle={styles.dropdownContainer}
+                    placeholderStyle={styles.placeholderStyle}
+                    textStyle={styles.textStyle}
+                  />
+                  {formErrors.user_level && (
+                    <Tooltip message={formErrors.user_level[0]}>
+                      <TouchableOpacity style={styles.errorIconContainer}>
+                        <AntDesign
+                          name="exclamationcircleo"
+                          size={20}
+                          color="red"
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
+                  )}
+                </View>
 
                 {/* Active Status */}
                 <Text style={styles.label}>Active Status</Text>
-                <DropDownPicker
-                  open={activeStatusOpen}
-                  value={activeStatusValue}
-                  items={[
-                    { label: 'Active', value: '1' },
-                    { label: 'Inactive', value: '0' },
-                  ]}
-                  setOpen={setActiveStatusOpen}
-                  setValue={(callback) => {
-                    const value = callback(activeStatusValue);
-                    setActiveStatusValue(value);
-                    handleInputChange('active', value);
-                  }}
-                  listMode="SCROLLVIEW"
-                  placeholder="Select Status"
-                  style={styles.dropdown}
-                  dropDownContainerStyle={styles.dropdownContainer}
-                />
-                {formErrors.active && (
-                  <Text style={styles.errorText}>{formErrors.active[0]}</Text>
-                )}
+                <View style={styles.inputContainer}>
+                  <DropDownPicker
+                    open={activeStatusOpen}
+                    value={activeStatusValue}
+                    items={[
+                      { label: 'Active', value: '1' },
+                      { label: 'Inactive', value: '0' },
+                    ]}
+                    setOpen={setActiveStatusOpen}
+                    setValue={(callback) => {
+                      const value = callback(activeStatusValue);
+                      setActiveStatusValue(value);
+                      handleInputChange('active', value);
+                    }}
+                    listMode="SCROLLVIEW"
+                    placeholder="Select Status"
+                    style={styles.dropdown}
+                    dropDownContainerStyle={styles.dropdownContainer}
+                    placeholderStyle={styles.placeholderStyle}
+                    textStyle={styles.textStyle}
+                  />
+                </View>
 
-                <TouchableOpacity style={styles.saveButton} onPress={handleSaveUser}>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSaveUser}
+                >
                   <Text style={styles.saveButtonText}>Save</Text>
                 </TouchableOpacity>
 
@@ -684,16 +843,36 @@ export default function ListOfUsers() {
         </Modal>
       )}
 
-   
       {showSuccessModal && (
         <Modal
-          animationType="slide"
           transparent={true}
           visible={showSuccessModal}
+          animationType="none"
           onRequestClose={() => setShowSuccessModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
+            <Animated.View
+              style={[
+                styles.successModalContainer,
+                {
+                  opacity: modalOpacityAnim,
+                  transform: [
+                    {
+                      scale: modalScaleAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.8, 1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Ionicons
+                name="checkmark-circle"
+                size={80}
+                color="#28a745"
+                style={styles.successIcon}
+              />
               <Text style={styles.successTitle}>Success</Text>
               <Text style={styles.successMessage}>
                 User information has been successfully updated.
@@ -704,7 +883,7 @@ export default function ListOfUsers() {
               >
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           </View>
         </Modal>
       )}
@@ -713,6 +892,7 @@ export default function ListOfUsers() {
 }
 
 const styles = StyleSheet.create({
+  // ... (Your existing styles)
   container: {
     flex: 1,
     padding: 20,
@@ -723,19 +903,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     fontFamily: 'OpenSans_400Regular',
-    textAlign: 'center'
+    textAlign: 'center',
   },
   editUserButton: {
-    backgroundColor: '#809fff',
+    backgroundColor: '#8B0000',
     padding: 10,
     alignItems: 'center',
-    borderRadius: 5,
+    borderRadius: 10,
     marginBottom: 10,
   },
   editUserButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontFamily: 'OpenSans_400Regular',
+    fontSize: 16,
   },
   searchInput: {
     borderWidth: 1,
@@ -792,7 +973,7 @@ const styles = StyleSheet.create({
   },
   paginationContainer: {
     flexDirection: 'row',
-    justifyContent: 'center', 
+    justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
   },
@@ -844,29 +1025,12 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
     elevation: 10,
   },
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#2A47CB',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontFamily: 'OpenSans_400Regular',
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#28a745',
-    textAlign: 'center',
-    marginBottom: 15,
-    fontFamily: 'OpenSans_400Regular',
-  },
-  successMessage: {
-    fontSize: 16,
+    color: '#000000',
     textAlign: 'center',
     marginBottom: 20,
     fontFamily: 'OpenSans_400Regular',
@@ -875,10 +1039,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 5,
     color: '#333',
+    fontWeight: 'bold',
     fontFamily: 'OpenSans_400Regular',
   },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    marginBottom: 10,
+  },
   input: {
-    width: '100%',
+    flex: 1,
     height: 45,
     paddingHorizontal: 10,
     borderWidth: 1,
@@ -886,20 +1057,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#F7F8FA',
     fontSize: 16,
-    marginBottom: 10,
     fontFamily: 'OpenSans_400Regular',
+    color: '#000',
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorIconContainer: {
+    marginLeft: 5,
   },
   dropdown: {
+    backgroundColor: '#F7F8FA',
     borderColor: '#DADCE0',
+    borderWidth: 1,
     borderRadius: 8,
-    marginBottom: 10,
-    fontFamily: 'OpenSans_400Regular',
+    flex: 1,
   },
   dropdownContainer: {
     borderColor: '#DADCE0',
+    borderRadius: 8,
+  },
+  placeholderStyle: {
+    color: '#7C7C7C',
+    fontFamily: 'OpenSans_400Regular',
+  },
+  textStyle: {
+    color: '#000',
+    fontFamily: 'OpenSans_400Regular',
   },
   saveButton: {
-    backgroundColor: '#2A47CB',
+    backgroundColor: '#A52A2A',
     paddingVertical: 12,
     alignItems: 'center',
     borderRadius: 8,
@@ -925,22 +1112,53 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'OpenSans_400Regular',
   },
-  closeButton: {
-    backgroundColor: '#2A47CB',
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-    marginTop: 15,
-  },
-  closeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'OpenSans_400Regular',
-  },
   errorText: {
     color: 'red',
     marginBottom: 5,
     fontFamily: 'OpenSans_400Regular',
+  },
+  successModalContainer: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 10,
+  },
+  successIcon: {
+    marginBottom: 15,
+  },
+  successTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#28a745',
+    textAlign: 'center',
+    marginBottom: 10,
+    fontFamily: 'Poppins-Bold',
+  },
+  successMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'Roboto-Regular',
+    color: '#3C4043',
+  },
+  closeButton: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#A52A2A',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontFamily: 'Roboto-Bold',
   },
 });

@@ -64,7 +64,7 @@ export default function LoginScreen() {
       setLoading(true);
 
      
-      const response = await axios.post('http://dts.sanjuancity.gov.ph/api/login', {
+      const response = await axios.post('http://192.168.0.50:8000/api/login', {
         username,
         password,
       });

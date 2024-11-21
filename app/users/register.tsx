@@ -136,7 +136,7 @@ const Register: React.FC = () => {
         }
 
         const response = await axios.get(
-          'http://dts.sanjuancity.gov.ph/api/department',
+          'http://192.168.0.50:8000/api/department',
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -217,7 +217,7 @@ const Register: React.FC = () => {
       }
 
       const response = await axios.post(
-        'http://dts.sanjuancity.gov.ph/api/register',
+        'http://192.168.0.50:8000/api/register',
         {
           name,
           middle_name,
@@ -533,6 +533,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
+    fontWeight: 'bold', 
     color: '#000000',
     marginBottom: 20,
     fontFamily: 'Poppins-Bold',
@@ -542,6 +543,7 @@ const styles = StyleSheet.create({
     color: '#3C4043',
     alignSelf: 'flex-start',
     marginBottom: 5,
+    fontWeight: 'bold', 
     marginTop: 10,
     fontFamily: 'Roboto-Regular',
   },

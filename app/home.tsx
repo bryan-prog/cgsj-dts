@@ -37,7 +37,7 @@ export default function Dashboard() {
     terminal: 0,
   });
 
-  // State variable to hold user data
+  
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function Dashboard() {
           return;
         }
         const response = await axios.get(
-          'http://dts.sanjuancity.gov.ph/api/home',
+          'http://192.168.0.50:8000/api/home',
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -71,7 +71,7 @@ export default function Dashboard() {
     fetchCounts();
   }, []);
 
-  // Fetch the logged-in user's data
+  
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -81,7 +81,7 @@ export default function Dashboard() {
           return;
         }
         const response = await axios.get(
-          'http://dts.sanjuancity.gov.ph/api/user', 
+          'http://192.168.0.50:8000/api/user', 
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -108,7 +108,7 @@ export default function Dashboard() {
 
       if (token) {
         const response = await axios.post(
-          'http://dts.sanjuancity.gov.ph/api/logout',
+          'http://192.168.0.50:8000/api/logout',
           {},
           {
             headers: {
