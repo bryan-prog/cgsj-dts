@@ -9,6 +9,7 @@ import {
   Image,
   Dimensions,
   ActivityIndicator,
+  StatusBar,
   Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from 'react-native-vector-icons';
@@ -18,6 +19,7 @@ import axios from 'axios';
 import Profile from './users/profile';
 import ListOfUsers from './users/list-of-users';
 import Register from './users/register';
+
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -50,7 +52,7 @@ export default function Dashboard() {
           return;
         }
         const response = await axios.get(
-          'http://192.168.0.50:8000/api/home',
+          'http://dts.sanjuancity.gov.ph/api/home',
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -81,7 +83,7 @@ export default function Dashboard() {
           return;
         }
         const response = await axios.get(
-          'http://192.168.0.50:8000/api/user', 
+          'http://dts.sanjuancity.gov.ph/api/user', 
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -108,7 +110,7 @@ export default function Dashboard() {
 
       if (token) {
         const response = await axios.post(
-          'http://192.168.0.50:8000/api/logout',
+          'http://dts.sanjuancity.gov.ph/api/logout',
           {},
           {
             headers: {

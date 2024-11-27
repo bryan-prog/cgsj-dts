@@ -13,6 +13,8 @@ import {
   Easing,
 } from 'react-native';
 import axios from 'axios';
+import { useFonts } from 'expo-font';
+import AppLoading from 'expo-app-loading';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -30,6 +32,12 @@ interface FormErrors {
 }
 
 export default function Profile() {
+
+  const [fontsLoaded] = useFonts({
+        'OpenSans-Bold': require("../../assets/fonts/OpenSans-Bold.ttf"),
+        'Lato-Bold': require('../../assets/fonts/Lato-Bold.ttf'),
+        "OpenSans-Regular": require("../../assets/fonts/OpenSans-Regular.ttf")
+  }); 
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [formData, setFormData] = useState<UserProfile | null>(null);
@@ -39,7 +47,6 @@ export default function Profile() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  // State variables for password change
   const [newPassword, setNewPassword] = useState<string>('');
   const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null);
   const [isChangingPassword, setIsChangingPassword] = useState<boolean>(false);
@@ -83,7 +90,7 @@ export default function Profile() {
         throw new Error('No authorization token found');
       }
 
-      const response = await axios.get('http://192.168.0.50:8000/api/my_profile', {
+      const response = await axios.get('http://dts.sanjuancity.gov.ph/api/my_profile', {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -143,7 +150,7 @@ export default function Profile() {
       };
 
       const response = await axios.post(
-        'http://192.168.0.50:8000/api/edit_save',
+        'http://dts.sanjuancity.gov.ph/api/edit_save',
         updateData,
         {
           headers: {
@@ -195,7 +202,7 @@ export default function Profile() {
       };
 
       const response = await axios.post(
-        'http://192.168.0.50:8000/api/change_pass',
+        'http://dts.sanjuancity.gov.ph/api/change_pass',
         changePassData,
         {
           headers: {
@@ -210,7 +217,7 @@ export default function Profile() {
 
       if (response.data.message === 'Successfully updated password!') {
         setIsChangingPassword(false);
-        setNewPassword(''); // Clear the password field
+        setNewPassword(''); 
         setSuccessMessage(response.data.message);
         setShowSuccessModal(true);
         setShowPasswordInput(false);
@@ -257,6 +264,10 @@ export default function Profile() {
     );
   }
 
+  if(!fontsLoaded){
+    return <AppLoading/>; 
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.profileHeader}>
@@ -270,7 +281,7 @@ export default function Profile() {
       </View>
 
       <View style={styles.formContainer}>
-        {/* Buttons before the input fields */}
+      
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[
@@ -278,9 +289,9 @@ export default function Profile() {
               {
                 backgroundColor: isEditing
                   ? hasChanges
-                    ? '#28a745' // Green color when there are unsaved changes
-                    : '#041435' // Same as Edit Profile button color
-                  : '#041435', // Same as Edit Profile button color when not editing
+                    ? '#28a745' 
+                    : '#041435'
+                  : '#041435', 
               },
               isEditing && !hasChanges ? styles.disabledButton : null,
               { opacity: isEditing && !hasChanges ? 0.6 : 1 },
@@ -319,7 +330,7 @@ export default function Profile() {
 
         {formErrors.general && <Text style={styles.errorText}>{formErrors.general}</Text>}
 
-        {/* Input fields */}
+      
         <Text style={styles.label}>First Name</Text>
         <TextInput
           style={[
@@ -421,12 +432,12 @@ export default function Profile() {
               <Text style={styles.errorText}>{passwordChangeError}</Text>
             )}
 
-            {/* Single "Change" button with updated color */}
+           
             <TouchableOpacity
               style={[
                 styles.button,
                 styles.fullWidthButton,
-                { backgroundColor: '#0066b2' }, // Updated button color
+                { backgroundColor: '#0066b2' }, 
                 { opacity: !newPassword || isChangingPassword ? 0.6 : 1 },
               ]}
               onPress={handleChangePassword}
@@ -501,7 +512,7 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     backgroundColor: '#041435',
-    paddingVertical: 40,
+    paddingVertical: 50,
     alignItems: 'center',
     marginBottom: 30,
   },
@@ -511,11 +522,12 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 26,
     color: '#fff',
-    fontFamily: 'Poppins-Bold',
-    fontWeight: 'bold',
+    fontFamily: 'Lato-Bold',
+    
   },
   formContainer: {
     paddingHorizontal: 20,
+    paddingBottom: 20
   },
   label: {
     fontSize: 16,
@@ -523,8 +535,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginBottom: 5,
     marginTop: 10,
-    fontWeight: 'bold',
-    fontFamily: 'Roboto-Regular',
+    fontFamily: 'OpenSans-Bold',
   },
   input: {
     width: '100%',
@@ -534,10 +545,10 @@ const styles = StyleSheet.create({
     borderColor: '#DADCE0',
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     color: '#202124',
     marginBottom: 5,
-    fontFamily: 'Roboto-Regular',
+    fontFamily: 'OpenSans-Regular',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -580,13 +591,13 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontFamily: 'Roboto-Bold',
+    fontFamily: 'OpenSans-Regular',
   },
   errorText: {
     color: 'red',
     marginTop: 5,
     fontSize: 14,
-    fontFamily: 'Roboto-Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   noDataText: {
     fontSize: 16,

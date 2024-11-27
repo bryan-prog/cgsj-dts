@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFonts } from 'expo-font';
+import AppLoading from 'expo-app-loading';
 
 interface FormData {
   name: string;
@@ -54,6 +56,12 @@ interface Department {
 }
 
 const Register: React.FC = () => {
+
+  const [fontsLoaded] = useFonts({
+    "OpenSans-Regular": require("../../assets/fonts/OpenSans-Regular.ttf"),
+    "OpenSans-Bold": require("../../assets/fonts/OpenSans-Bold.ttf"), 
+    "Lato-Bold": require("../../assets/fonts/Lato-Bold.ttf")
+  })
   const [formData, setFormData] = useState<FormData>({
     name: '',
     middle_name: '',
@@ -136,7 +144,7 @@ const Register: React.FC = () => {
         }
 
         const response = await axios.get(
-          'http://192.168.0.50:8000/api/department',
+          'http://dts.sanjuancity.gov.ph/api/department',
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -217,7 +225,7 @@ const Register: React.FC = () => {
       }
 
       const response = await axios.post(
-        'http://192.168.0.50:8000/api/register',
+        'http://dts.sanjuancity.gov.ph/api/register',
         {
           name,
           middle_name,
@@ -258,7 +266,7 @@ const Register: React.FC = () => {
           password: '',
           password_confirmation: '',
         });
-        setDepartmentValue('---'); 
+        setDepartmentValue('----'); 
         setUserLevelValue('----'); 
       } else {
         Alert.alert(
@@ -296,6 +304,11 @@ const Register: React.FC = () => {
       setLoading(false);
     }
   };
+
+
+  if(!fontsLoaded){
+    return <AppLoading/>;
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -533,19 +546,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold', 
     color: '#000000',
     marginBottom: 20,
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Lato-Bold',
   },
   label: {
     fontSize: 16,
     color: '#3C4043',
     alignSelf: 'flex-start',
     marginBottom: 5,
-    fontWeight: 'bold', 
     marginTop: 10,
-    fontFamily: 'Roboto-Regular',
+    fontFamily: 'OpenSans-Bold',
   },
   input: {
     width: '100%',
@@ -555,10 +566,10 @@ const styles = StyleSheet.create({
     borderColor: '#DADCE0',
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     color: '#202124',
     marginBottom: 5,
-    fontFamily: 'Roboto-Regular',
+    fontFamily: 'OpenSans-Regular',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,

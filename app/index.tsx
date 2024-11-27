@@ -1,17 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, Text, View, TextInput, TouchableOpacity, ImageBackground, Image, Modal, KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import { Dimensions } from 'react-native';
+import React, { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Image,
+  Modal,
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  Platform,
+  Dimensions,
+  StatusBar,
+  KeyboardAvoidingView,
+  Keyboard, 
+} from "react-native";
+import { useFonts } from "expo-font";
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { useRouter } from 'expo-router';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AppLoading from 'expo-app-loading'; 
 
 const { width, height } = Dimensions.get('window');
 
-export default function LoginScreen() {
+export default function App() {
+  const [fontsLoaded] = useFonts({
+    "GaMaamli-Regular": require("../assets/fonts/GaMaamli-Regular.ttf"),
+    "OpenSans-Regular": require("../assets/fonts/OpenSans-Regular.ttf"),
+    "OpenSans-Bold": require("../assets/fonts/OpenSans-Bold.ttf"),
+    "DelaGothicOne-Regular": require("../assets/fonts/DelaGothicOne-Regular.ttf"),
+    'Lato-Bold': require('../assets/fonts/Lato-Bold.ttf')
+  });
+
   const [username, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,6 +44,8 @@ export default function LoginScreen() {
   const [isConnected, setIsConnected] = useState(true);
   const [showNoInternetModal, setShowNoInternetModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false); // Add this state
+
   const router = useRouter();
 
   useEffect(() => {
@@ -47,7 +73,20 @@ export default function LoginScreen() {
     }
   }, [error]);
 
+  // Add this useEffect to listen to keyboard events
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
 
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   async function handleLogin() {
     if (!username || !password) {
@@ -63,8 +102,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
-     
-      const response = await axios.post('http://192.168.0.50:8000/api/login', {
+      const response = await axios.post('http://dts.sanjuancity.gov.ph/api/login', {
         username,
         password,
       });
@@ -74,7 +112,6 @@ export default function LoginScreen() {
 
         await AsyncStorage.setItem('authToken', authToken);
 
-   
         if (response.data.redirect_to === 'mayors_page') {
           router.replace('/mayors_page'); 
         } else {
@@ -94,38 +131,52 @@ export default function LoginScreen() {
     }
   }
 
+  if (!fontsLoaded) {
+    return <AppLoading/>;  
+  }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#1b2560" }}>
       <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <ImageBackground source={require('../assets/images/bg.png')} style={styles.background}>
-            <View style={styles.logoContainer}>
-              <Image source={require('../assets/images/bagong-pilipinas.png')} style={styles.logo} />
-              <Image source={require('../assets/images/sjc.png')} style={styles.logo} />
-              <Image source={require('../assets/images/mayor.png')} style={styles.logo} />
-              <Image source={require('../assets/images/icto.png')} style={styles.logo} />
+          <View style={styles.container}>
+            <StatusBar backgroundColor="#1b2560" barStyle="light-content" />
+
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require("../assets/images/bagong-pilipinas.png")}
+                  style={styles.logo}
+                />
+                <Image
+                  source={require("../assets/images/sjc.png")}
+                  style={styles.logo}
+                />
+                <Image
+                  source={require("../assets/images/mayor.png")}
+                  style={styles.logo}
+                />
+                <Image
+                  source={require("../assets/images/icto.png")}
+                  style={styles.logo}
+                />
+              </View>
+
+              <Text style={styles.title}>Welcome!</Text>
             </View>
 
-            <Text style={styles.welcomeText}>Welcome!</Text>
-
-            <LinearGradient
-              colors={['#001f3f', '#001f3f']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.loginBox}
-            >
-              <Text style={styles.title}>DOCUMENT TRACKING SYSTEM</Text>
+            <View style={styles.formContainer}>
+              <Text style={styles.subTitle}>DOCUMENT TRACKING SYSTEM</Text>
 
               <View style={styles.inputContainer}>
-                <Icon name="user" size={20} color="#fff" style={styles.icon} />
+                <Icon name="user" size={width * 0.05} color="#888" style={styles.icon} />
                 <TextInput
                   style={styles.input}
                   placeholder="username"
-                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  placeholderTextColor="#888"
                   autoCapitalize="none"
                   value={username}
                   onChangeText={setUserName}
@@ -133,19 +184,21 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <Icon name="lock" size={20} color="#fff" style={styles.icon} />
+                <Icon name="lock" size={width * 0.05} color="#888" style={styles.icon} />
                 <TextInput
                   style={styles.input}
                   placeholder="password"
-                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  placeholderTextColor="#888"
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <Icon name={showPassword ? 'eye' : 'eye-slash'} size={20} color="#fff" />
+                  <Icon name={showPassword ? 'eye' : 'eye-slash'} size={width * 0.05} color="#888" />
                 </TouchableOpacity>
               </View>
+
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
               <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
                 {loading ? (
@@ -154,16 +207,22 @@ export default function LoginScreen() {
                   <Text style={styles.loginButtonText}>Login</Text>
                 )}
               </TouchableOpacity>
+            </View>
 
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            </LinearGradient>
-
-            <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.imageButton}>
-              <Image source={require('../assets/images/seal2.png')} style={styles.npcImage} />
-            </TouchableOpacity>
+            {/* Conditionally render the footer logo */}
+            {!isKeyboardVisible && (
+              <View style={styles.floatingLogoContainer}>
+                <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.footerLogoContainer}>
+                  <Image
+                    source={require("../assets/images/npc-2.png")}
+                    style={styles.footerLogo}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
 
             <Modal
-              animationType="none"
+              animationType="fade"
               transparent={true}
               visible={modalVisible}
               onRequestClose={() => {
@@ -175,12 +234,12 @@ export default function LoginScreen() {
                 activeOpacity={1}
                 onPress={() => setModalVisible(false)}
               >
-                <TouchableOpacity style={styles.modalContent} activeOpacity={1} onPress={() => { }}>
+                <View style={styles.modalContent}>
                   <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                     <Text style={styles.closeButtonText}>X</Text>
                   </TouchableOpacity>
                   <Image source={require('../assets/images/npc.jpg')} style={styles.npcModalImage} />
-                </TouchableOpacity>
+                </View>
               </TouchableOpacity>
             </Modal>
 
@@ -194,7 +253,7 @@ export default function LoginScreen() {
                 <View style={styles.noInternetModal}>
                   <MaterialCommunityIcons
                     name="wifi-off"
-                    size={50}
+                    size={width * 0.12}
                     color="#ff0000"
                     style={styles.noWifiIcon}
                   />
@@ -208,7 +267,7 @@ export default function LoginScreen() {
                 </View>
               </View>
             </Modal>
-          </ImageBackground>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -216,89 +275,118 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: {
+  container: {
     flex: 1,
-    resizeMode: 'cover',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#1b2560",
+  },
+  header: {
+    flex: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1b2560",
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   logoContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 0,
-    marginTop: 80,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: height * 0.02,
   },
   logo: {
-    width: 75,
-    height: 80,
-    margin: 3,
-  },
-  welcomeText: {
-    fontSize: 24,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginTop: 10,
-  },
-  loginBox: {
-    width: width * 0.9,
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-    marginTop: 30,
+    width: width * 0.2,
+    height: width * 0.2,
+    marginHorizontal: width * 0.01,
+    resizeMode: "contain",
   },
   title: {
-    fontSize: 16,
-    color: '#fff',
-    marginBottom: 40,
-    fontWeight: 'bold',
+    color: "#fff",
+    fontSize: width * 0.07,
+    marginTop: height * 0.02,
+    fontFamily: "DelaGothicOne-Regular",
+  },
+  formContainer: {
+    flex: 3,
+    backgroundColor: "#ffff",
+    borderTopLeftRadius: width * 0.13,
+    borderTopRightRadius: width * 0.13,
+    paddingHorizontal: width * 0.05,
+    justifyContent: "flex-start",
+    paddingTop: height * 0.07,
+    paddingBottom: height * 0.05,
+  },
+  subTitle: {
+    textAlign: "center",
+    color: "#1b2560",
+    fontSize: width * 0.055,
+    fontFamily: "Lato-Bold",
+    marginBottom: height * 0.03,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
-    height: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 10,
-    marginBottom: 20,
-    paddingHorizontal: 15,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    height: height * 0.07,
+    backgroundColor: "#F8F9FC",
+    borderRadius: width * 0.02,
     borderWidth: 1,
+    borderColor: "#D1D5DB",
+    paddingHorizontal: width * 0.04,
+    marginBottom: height * 0.02,
   },
   icon: {
-    marginRight: 10,
+    marginRight: width * 0.02,
   },
   input: {
     flex: 1,
-    color: '#fff',
-    fontSize: 16,
-  },
-  loginButton: {
-    width: width * 0.75,
-    height: 50,
-    backgroundColor: '#800000',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: width * 0.045,
+    color: "#333",
+    fontFamily: "OpenSans-Regular",
+    paddingLeft: width * 0.02,
   },
   errorText: {
     color: 'red',
-    marginTop: 10,
-    fontSize: 13,
+    marginBottom: height * 0.01,
+    fontSize: width * 0.04,
+    textAlign: 'center',
+    fontFamily: 'OpenSans-Regular',
   },
-  imageButton: {
-    marginTop: 20,
-    alignItems: 'center',
+  loginButton: {
+    height: height * 0.07,
+    backgroundColor: "#a52a2a",
+    borderRadius: width * 0.07,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: height * 0.015,
   },
-  npcImage: {
-    width: 120,
-    height: 110,
-    resizeMode: 'contain',
-    backgroundColor: 'transparent',
+  loginButtonText: {
+    color: "#fff",
+    fontSize: width * 0.05,
+    fontFamily: "OpenSans-Bold",
+  },
+  floatingLogoContainer: {
+    position: "absolute",
+    bottom: height * 0.07,
+    alignSelf: "center",
+    zIndex: 10,
+  },
+  footerLogoContainer: {
+    width: width * 0.2,
+    height: width * 0.2,
+    borderRadius: (width * 0.3) / 2,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#1b2560",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: height * 0.005 },
+    shadowOpacity: 0.25,
+    shadowRadius: width * 0.02,
+    elevation: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  footerLogo: {
+    width: "70%",
+    height: "70%",
+    resizeMode: "contain",
   },
   modalOverlay: {
     flex: 1,
@@ -307,20 +395,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    width: width * 0.9,
-    height: height * 0.35,
+    width: width * 0.85,
+    height: height * 0.4,
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: width * 0.02,
+    padding: width * 0.05,
     alignItems: 'center',
   },
   closeButton: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: height * 0.015,
+    right: width * 0.04,
+    backgroundColor: '#ddd',
+    borderRadius: width * 0.04,
+    width: width * 0.08,
+    height: width * 0.08,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   closeButtonText: {
-    fontSize: 18,
+    fontSize: width * 0.05,
     fontWeight: 'bold',
     color: '#000',
   },
@@ -332,30 +426,30 @@ const styles = StyleSheet.create({
   noInternetModal: {
     width: width * 0.8,
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: width * 0.02,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 30,
-  },
-  noInternetText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 20,
-    textAlign: 'center',
+    padding: width * 0.05,
   },
   noWifiIcon: {
-    marginBottom: 20, 
+    marginBottom: height * 0.02,
+  },
+  noInternetText: {
+    fontSize: width * 0.05,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: height * 0.02,
+    textAlign: 'center',
   },
   okButton: {
     backgroundColor: '#4B0082',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 5,
+    paddingHorizontal: width * 0.05,
+    paddingVertical: height * 0.015,
+    borderRadius: width * 0.02,
   },
   okButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: width * 0.045,
     fontWeight: 'bold',
   },
 });

@@ -17,11 +17,9 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
-import {
-  useFonts,
-  OpenSans_400Regular,
-  OpenSans_700Bold,
-} from '@expo-google-fonts/open-sans';
+
+import { useFonts } from 'expo-font';
+import AppLoading from 'expo-app-loading';
 import Tooltip from './tooltip'
 
 interface User {
@@ -62,6 +60,12 @@ interface Department {
 }
 
 export default function ListOfUsers() {
+
+  const [fontsLoaded] = useFonts({
+      "OpenSans-Regular": require("../../assets/fonts/OpenSans-Regular.ttf"),
+      "OpenSans-Bold": require("../../assets/fonts/OpenSans-Bold.ttf"),
+      "Lato-Bold": require("../../assets/fonts/Lato-Bold.ttf")
+  }); 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
@@ -106,10 +110,7 @@ export default function ListOfUsers() {
   const [activeStatusOpen, setActiveStatusOpen] = useState(false);
   const [activeStatusValue, setActiveStatusValue] = useState<string>('');
 
-  const [fontsLoaded] = useFonts({
-    OpenSans_400Regular,
-    OpenSans_700Bold,
-  });
+ 
 
 
   const modalScaleAnim = useRef(new Animated.Value(0)).current;
@@ -121,6 +122,12 @@ export default function ListOfUsers() {
       fetchUsers();
     }
   }, [fontsLoaded]);
+
+  if(!fontsLoaded){
+    return <AppLoading/>; 
+  }
+
+  
 
   useEffect(() => {
     if (showSuccessModal) {
@@ -154,7 +161,7 @@ export default function ListOfUsers() {
       }
 
       const response = await axios.get(
-        `http://192.168.0.50:8000/api/list-user`,
+        `http://dts.sanjuancity.gov.ph/api/list-user`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`,
@@ -181,7 +188,7 @@ export default function ListOfUsers() {
       }
 
       const response = await axios.get(
-        'http://192.168.0.50:8000/api/department',
+        'http://dts.sanjuancity.gov.ph/api/department',
         {
           headers: {
             Authorization: `Bearer ${authToken}`,
@@ -350,7 +357,7 @@ export default function ListOfUsers() {
       }
 
       const response = await axios.post(
-        'http://192.168.0.50:8000/api/edit-user',
+        'http://dts.sanjuancity.gov.ph/api/edit-user',
         formData,
         {
           headers: {
@@ -431,7 +438,7 @@ export default function ListOfUsers() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>List of Users</Text>
+      <Text style={styles.title}>LIST OF USERS</Text>
       <TouchableOpacity
         style={[
           styles.editUserButton,
@@ -566,7 +573,7 @@ export default function ListOfUsers() {
               <ScrollView>
                 <Text style={styles.modalTitle}>Edit User</Text>
 
-                {/* First Name */}
+             
                 <Text style={styles.label}>First Name</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -603,7 +610,7 @@ export default function ListOfUsers() {
                   />
                 </View>
 
-                {/* Last Name */}
+               
                 <Text style={styles.label}>Last Name</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -631,7 +638,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-                {/* Suffix */}
+            
                 <Text style={styles.label}>Suffix</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -643,7 +650,7 @@ export default function ListOfUsers() {
                   />
                 </View>
 
-                {/* Assigned Office/Department */}
+             
                 <Text style={styles.label}>Assigned Office/Department</Text>
                 <View style={styles.inputContainer}>
                   <DropDownPicker
@@ -681,7 +688,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-                {/* Designation */}
+                
                 <Text style={styles.label}>Designation</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -709,7 +716,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-                {/* Contact */}
+               
                 <Text style={styles.label}>Contact</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -735,7 +742,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-                {/* Username */}
+                
                 <Text style={styles.label}>Username</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -763,7 +770,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-                {/* User Level */}
+               
                 <Text style={styles.label}>User Level</Text>
                 <View style={styles.inputContainer}>
                   <DropDownPicker
@@ -799,7 +806,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-                {/* Active Status */}
+               
                 <Text style={styles.label}>Active Status</Text>
                 <View style={styles.inputContainer}>
                   <DropDownPicker
@@ -892,7 +899,7 @@ export default function ListOfUsers() {
 }
 
 const styles = StyleSheet.create({
-  // ... (Your existing styles)
+  
   container: {
     flex: 1,
     padding: 20,
@@ -900,9 +907,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
     marginBottom: 10,
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Bold',
     textAlign: 'center',
   },
   editUserButton: {
@@ -914,8 +920,7 @@ const styles = StyleSheet.create({
   },
   editUserButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Bold',
     fontSize: 16,
   },
   searchInput: {
@@ -925,7 +930,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 10,
     fontSize: 16,
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   searchInputFocused: {
     borderColor: '#2A47CB',
@@ -944,7 +949,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     paddingHorizontal: 5,
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   userRow: {
     flexDirection: 'row',
@@ -960,7 +965,7 @@ const styles = StyleSheet.create({
     width: 100,
     textAlign: 'center',
     paddingHorizontal: 5,
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   noResults: {
     padding: 20,
@@ -1039,8 +1044,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 5,
     color: '#333',
-    fontWeight: 'bold',
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Bold'
   },
   inputContainer: {
     flexDirection: 'row',
@@ -1057,7 +1061,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#F7F8FA',
     fontSize: 16,
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
     color: '#000',
   },
   inputError: {
@@ -1079,11 +1083,11 @@ const styles = StyleSheet.create({
   },
   placeholderStyle: {
     color: '#7C7C7C',
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   textStyle: {
     color: '#000',
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   saveButton: {
     backgroundColor: '#A52A2A',
@@ -1096,7 +1100,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   cancelButton: {
     backgroundColor: '#f1f1f1',
@@ -1110,12 +1114,12 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   errorText: {
     color: 'red',
     marginBottom: 5,
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   successModalContainer: {
     width: '85%',
@@ -1159,6 +1163,6 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontFamily: 'Roboto-Bold',
+    fontFamily: 'OpenSans-Regular',
   },
 });
