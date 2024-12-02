@@ -44,7 +44,7 @@ export default function App() {
   const [isConnected, setIsConnected] = useState(true);
   const [showNoInternetModal, setShowNoInternetModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false); // Add this state
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false); 
 
   const router = useRouter();
 
@@ -73,7 +73,7 @@ export default function App() {
     }
   }, [error]);
 
-  // Add this useEffect to listen to keyboard events
+  
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
       setKeyboardVisible(true);
@@ -209,7 +209,7 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* Conditionally render the footer logo */}
+           
             {!isKeyboardVisible && (
               <View style={styles.floatingLogoContainer}>
                 <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.footerLogoContainer}>

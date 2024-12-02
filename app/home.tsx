@@ -19,11 +19,20 @@ import axios from 'axios';
 import Profile from './users/profile';
 import ListOfUsers from './users/list-of-users';
 import Register from './users/register';
+import {useFonts} from 'expo-font'
+import AppLoading from 'expo-app-loading';
 
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function Dashboard() {
+
+  const [fontsLoaded] = useFonts({
+    'OpenSans-Regular': require("../assets/fonts/OpenSans-Regular.ttf"), 
+    'OpenSans-Bold': require("../assets/fonts/OpenSans-Bold.ttf"), 
+    'Lato-Bold': require("../assets/fonts/Lato-Bold.ttf"), 
+    
+  })
   const router = useRouter();
   const [drawer, setDrawer] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -144,6 +153,10 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if(!fontsLoaded){
+    return <AppLoading/>; 
   }
 
   const renderContent = () => {
@@ -581,19 +594,21 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
+    fontFamily: 'OpenSans-Bold',
     fontWeight: '600',
     color: '#333',
     marginBottom: 5,
   },
   cardCount: {
     fontSize: 36,
-    fontWeight: 'bold',
+    fontFamily: 'OpenSans-Bold', 
     color: '#333',
     marginBottom: 5,
   },
   cardSubtitle: {
     fontSize: 16,
     color: '#666',
+    fontFamily: 'OpenSans-Regular'
   },
   iconBackground: {
     width: 70,

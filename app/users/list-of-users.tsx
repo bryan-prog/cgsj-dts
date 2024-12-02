@@ -20,7 +20,7 @@ import { AntDesign, Ionicons } from '@expo/vector-icons';
 
 import { useFonts } from 'expo-font';
 import AppLoading from 'expo-app-loading';
-import Tooltip from './tooltip'
+import Tooltip from './tooltip'; // Ensure this component is available
 
 interface User {
   id: number;
@@ -52,6 +52,7 @@ interface FormData {
 
 interface FormErrors {
   [key: string]: string[];
+  password?: string[];
 }
 
 interface Department {
@@ -60,12 +61,12 @@ interface Department {
 }
 
 export default function ListOfUsers() {
-
   const [fontsLoaded] = useFonts({
-      "OpenSans-Regular": require("../../assets/fonts/OpenSans-Regular.ttf"),
-      "OpenSans-Bold": require("../../assets/fonts/OpenSans-Bold.ttf"),
-      "Lato-Bold": require("../../assets/fonts/Lato-Bold.ttf")
-  }); 
+    'OpenSans-Regular': require('../../assets/fonts/OpenSans-Regular.ttf'),
+    'OpenSans-Bold': require('../../assets/fonts/OpenSans-Bold.ttf'),
+    'Lato-Bold': require('../../assets/fonts/Lato-Bold.ttf'),
+  });
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
@@ -76,7 +77,6 @@ export default function ListOfUsers() {
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
-  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   const [formData, setFormData] = useState<FormData>({
     user_id: '',
     name: '',
@@ -110,8 +110,10 @@ export default function ListOfUsers() {
   const [activeStatusOpen, setActiveStatusOpen] = useState(false);
   const [activeStatusValue, setActiveStatusValue] = useState<string>('');
 
- 
-
+  const [password, setPassword] = useState<string>('');
+  const [isChangingPassword, setIsChangingPassword] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
 
   const modalScaleAnim = useRef(new Animated.Value(0)).current;
   const modalOpacityAnim = useRef(new Animated.Value(0)).current;
@@ -123,11 +125,9 @@ export default function ListOfUsers() {
     }
   }, [fontsLoaded]);
 
-  if(!fontsLoaded){
-    return <AppLoading/>; 
+  if (!fontsLoaded) {
+    return <AppLoading />;
   }
-
-  
 
   useEffect(() => {
     if (showSuccessModal) {
@@ -228,7 +228,6 @@ export default function ListOfUsers() {
     setFormErrors({ ...formErrors, [name]: undefined });
   };
 
-  
   function validateFormData(formData: FormData): FormErrors {
     const errors: FormErrors = {};
     if (!formData.name) errors.name = ['First name is required.'];
@@ -241,7 +240,7 @@ export default function ListOfUsers() {
       errors.office_dept = ['Assigned office is required.'];
     if (!formData.user_level)
       errors.user_level = ['User level is required.'];
-    
+
     return errors;
   }
 
@@ -334,6 +333,7 @@ export default function ListOfUsers() {
         setUserLevelValue(user.user_level || '');
         setActiveStatusValue(user.active.toString());
         setFormErrors({});
+        setPassword('');
         setShowEditModal(true);
       }
     } else {
@@ -342,7 +342,6 @@ export default function ListOfUsers() {
   };
 
   const handleSaveUser = async () => {
-    
     const errors = validateFormData(formData);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -377,6 +376,7 @@ export default function ListOfUsers() {
 
       setShowEditModal(false);
       setSelectedUserId(null);
+      setSuccessMessage('User information has been successfully updated.');
       setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Error saving user:', error);
@@ -390,9 +390,67 @@ export default function ListOfUsers() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!selectedUserId) {
+      Alert.alert('Error', 'No user selected.');
+      return;
+    }
+    if (!password) {
+      setFormErrors({ password: ['Password is required.'] });
+      return;
+    }
+    try {
+      setIsChangingPassword(true);
+      const authToken = await AsyncStorage.getItem('authToken');
+      if (!authToken) {
+        throw new Error('No authorization token found');
+      }
+
+      const data = {
+        user_id: selectedUserId,
+        password: password,
+        password_confirmation: password, 
+      };
+
+      const response = await axios.post(
+        'http://dts.sanjuancity.gov.ph/api/change-password',
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+        }
+      );
+
+    
+      if (response.data.message) {
+        setSuccessMessage(response.data.message);
+      } else {
+        setSuccessMessage('Password has been successfully changed.');
+      }
+      setShowSuccessModal(true);
+      setPassword('');
+      setFormErrors({});
+    } catch (error: any) {
+      console.error(
+        'Error changing password:',
+        error.response ? error.response.data : error
+      );
+      if (error.response && error.response.data && error.response.data.error) {
+        setFormErrors(error.response.data.error);
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred.');
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   const generatePageNumbers = () => {
     const pageNumbers = [];
-    const totalNumbers = 5; 
+    const totalNumbers = 5;
     const halfTotalNumbers = Math.floor(totalNumbers / 2);
 
     let startPage = Math.max(2, currentPage - halfTotalNumbers);
@@ -431,10 +489,6 @@ export default function ListOfUsers() {
   };
 
   const pageNumbers = generatePageNumbers();
-
-  if (!fontsLoaded) {
-    return <ActivityIndicator size="large" color="#2A47CB" />;
-  }
 
   return (
     <View style={styles.container}>
@@ -559,6 +613,7 @@ export default function ListOfUsers() {
         </TouchableOpacity>
       </View>
 
+  
       {showEditModal && (
         <Modal
           animationType="fade"
@@ -569,11 +624,11 @@ export default function ListOfUsers() {
           }}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
+            <View style={styles.modalContainerEdit}>
               <ScrollView>
-                <Text style={styles.modalTitle}>Edit User</Text>
+                <Text style={styles.modalTitle}>Edit User Details</Text>
 
-             
+                
                 <Text style={styles.label}>First Name</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -596,7 +651,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-              
+             
                 <Text style={styles.label}>Middle Name</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -610,7 +665,7 @@ export default function ListOfUsers() {
                   />
                 </View>
 
-               
+              
                 <Text style={styles.label}>Last Name</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -638,7 +693,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-            
+               
                 <Text style={styles.label}>Suffix</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -650,7 +705,7 @@ export default function ListOfUsers() {
                   />
                 </View>
 
-             
+               
                 <Text style={styles.label}>Assigned Office/Department</Text>
                 <View style={styles.inputContainer}>
                   <DropDownPicker
@@ -688,7 +743,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-                
+               
                 <Text style={styles.label}>Designation</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -716,7 +771,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-               
+              
                 <Text style={styles.label}>Contact</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -742,7 +797,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-                
+             
                 <Text style={styles.label}>Username</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -770,7 +825,7 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-               
+            
                 <Text style={styles.label}>User Level</Text>
                 <View style={styles.inputContainer}>
                   <DropDownPicker
@@ -806,8 +861,8 @@ export default function ListOfUsers() {
                   )}
                 </View>
 
-               
-                <Text style={styles.label}>Active Status</Text>
+              
+                <Text style={styles.label}>User Status</Text>
                 <View style={styles.inputContainer}>
                   <DropDownPicker
                     open={activeStatusOpen}
@@ -831,11 +886,56 @@ export default function ListOfUsers() {
                   />
                 </View>
 
+               
+                <Text style={styles.label}>Change Password</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      formErrors.password && styles.inputError,
+                    ]}
+                    placeholder="Enter new password"
+                    placeholderTextColor="#7C7C7C"
+                    value={password}
+                    onChangeText={(text) => setPassword(text)}
+                    secureTextEntry={true}
+                  />
+                  {formErrors.password && (
+                    <Tooltip message={formErrors.password[0]}>
+                      <TouchableOpacity style={styles.errorIconContainer}>
+                        <AntDesign
+                          name="exclamationcircleo"
+                          size={20}
+                          color="red"
+                        />
+                      </TouchableOpacity>
+                    </Tooltip>
+                  )}
+                </View>
+
+           
+                <TouchableOpacity
+                  style={[
+                    styles.changePassButton,
+                    { opacity: isChangingPassword ? 0.6 : 1 },
+                  ]}
+                  onPress={handleChangePassword}
+                  disabled={isChangingPassword}
+                >
+                  {isChangingPassword ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.changePassButtonText}>
+                      Change Password
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
                 <TouchableOpacity
                   style={styles.saveButton}
                   onPress={handleSaveUser}
                 >
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  <Text style={styles.saveButtonText}>Save Changes</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -850,6 +950,7 @@ export default function ListOfUsers() {
         </Modal>
       )}
 
+     
       {showSuccessModal && (
         <Modal
           transparent={true}
@@ -860,7 +961,7 @@ export default function ListOfUsers() {
           <View style={styles.modalOverlay}>
             <Animated.View
               style={[
-                styles.successModalContainer,
+                styles.modalContainer,
                 {
                   opacity: modalOpacityAnim,
                   transform: [
@@ -882,7 +983,7 @@ export default function ListOfUsers() {
               />
               <Text style={styles.successTitle}>Success</Text>
               <Text style={styles.successMessage}>
-                User information has been successfully updated.
+                {successMessage || 'Operation completed successfully.'}
               </Text>
               <TouchableOpacity
                 style={styles.closeButton}
@@ -899,7 +1000,6 @@ export default function ListOfUsers() {
 }
 
 const styles = StyleSheet.create({
-  
   container: {
     flex: 1,
     padding: 20,
@@ -974,7 +1074,7 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: 16,
     color: '#666',
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   paginationContainer: {
     flexDirection: 'row',
@@ -1005,18 +1105,18 @@ const styles = StyleSheet.create({
   pageNumberText: {
     color: '#2A47CB',
     fontSize: 16,
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   currentPageText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   ellipsisText: {
     fontSize: 16,
     marginHorizontal: 5,
     color: '#333',
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   modalOverlay: {
     flex: 1,
@@ -1024,7 +1124,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContainer: {
+  modalContainerEdit: {
     width: '90%',
     backgroundColor: '#fff',
     borderRadius: 15,
@@ -1032,19 +1132,76 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     elevation: 10,
   },
+  modalContainer: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 10,
+  },
+  successIcon: {
+    marginBottom: 15,
+  },
+  successTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#28a745',
+    textAlign: 'center',
+    marginBottom: 10,
+    fontFamily: 'Poppins-Bold',
+  },
+  successMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'Roboto-Regular',
+    color: '#3C4043',
+  },
+  closeButton: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#A52A2A',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontFamily: 'OpenSans-Regular',
+  },
+  changePassButton: {
+    backgroundColor: '#041435',
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 8,
+    marginTop: 15,
+  },
+  changePassButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'OpenSans-Regular',
+  },
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: '#000000',
     textAlign: 'center',
     marginBottom: 20,
-    fontFamily: 'OpenSans_400Regular',
+    fontFamily: 'OpenSans-Regular',
   },
   label: {
     fontSize: 16,
     marginBottom: 5,
     color: '#333',
-    fontFamily: 'OpenSans-Bold'
+    fontFamily: 'OpenSans-Bold',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -1090,7 +1247,7 @@ const styles = StyleSheet.create({
     fontFamily: 'OpenSans-Regular',
   },
   saveButton: {
-    backgroundColor: '#A52A2A',
+    backgroundColor: '#28a745',
     paddingVertical: 12,
     alignItems: 'center',
     borderRadius: 8,
@@ -1103,7 +1260,7 @@ const styles = StyleSheet.create({
     fontFamily: 'OpenSans-Regular',
   },
   cancelButton: {
-    backgroundColor: '#f1f1f1',
+    backgroundColor: '#A52A2A',
     paddingVertical: 12,
     alignItems: 'center',
     borderRadius: 8,
@@ -1111,7 +1268,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   cancelButtonText: {
-    color: '#333',
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'OpenSans-Regular',
@@ -1119,50 +1276,6 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     marginBottom: 5,
-    fontFamily: 'OpenSans-Regular',
-  },
-  successModalContainer: {
-    width: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 10,
-  },
-  successIcon: {
-    marginBottom: 15,
-  },
-  successTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#28a745',
-    textAlign: 'center',
-    marginBottom: 10,
-    fontFamily: 'Poppins-Bold',
-  },
-  successMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-    fontFamily: 'Roboto-Regular',
-    color: '#3C4043',
-  },
-  closeButton: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#A52A2A',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  closeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
     fontFamily: 'OpenSans-Regular',
   },
 });
