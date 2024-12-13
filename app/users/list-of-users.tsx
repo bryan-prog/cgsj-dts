@@ -20,7 +20,7 @@ import { AntDesign, Ionicons } from '@expo/vector-icons';
 
 import { useFonts } from 'expo-font';
 import AppLoading from 'expo-app-loading';
-import Tooltip from './tooltip'; // Ensure this component is available
+import Tooltip from './tooltip'; 
 
 interface User {
   id: number;

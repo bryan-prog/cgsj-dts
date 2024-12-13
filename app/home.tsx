@@ -1,3 +1,5 @@
+// Dashboard.js
+
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -9,35 +11,38 @@ import {
   Image,
   Dimensions,
   ActivityIndicator,
-  StatusBar,
   Alert,
 } from 'react-native';
-import { MaterialCommunityIcons } from 'react-native-vector-icons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Profile from './users/profile';
 import ListOfUsers from './users/list-of-users';
 import Register from './users/register';
-import {useFonts} from 'expo-font'
+import QrGenerator from './qrgenerator';
+import { useFonts } from 'expo-font';
 import AppLoading from 'expo-app-loading';
-
+import MyDocuments from './documents/my_document'; 
+import ReceivedDocuments from './documents/received_document'; 
+import ReturnedDocuments from './documents/returned_document'; 
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function Dashboard() {
-
   const [fontsLoaded] = useFonts({
-    'OpenSans-Regular': require("../assets/fonts/OpenSans-Regular.ttf"), 
-    'OpenSans-Bold': require("../assets/fonts/OpenSans-Bold.ttf"), 
-    'Lato-Bold': require("../assets/fonts/Lato-Bold.ttf"), 
-    
-  })
+    'OpenSans-Regular': require('../assets/fonts/OpenSans-Regular.ttf'),
+    'OpenSans-Bold': require('../assets/fonts/OpenSans-Bold.ttf'),
+    'Lato-Bold': require('../assets/fonts/Lato-Bold.ttf'),
+  });
+
   const router = useRouter();
   const [drawer, setDrawer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [countsLoading, setCountsLoading] = useState(false);
   const [showUserSubMenu, setShowUserSubMenu] = useState(false);
+  const [showQRSubMenu, setShowQRSubMenu] = useState(false);
+  const [showDocumentsSubMenu, setShowDocumentsSubMenu] = useState(false); 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [counts, setCounts] = useState({
     released: 0,
@@ -48,7 +53,6 @@ export default function Dashboard() {
     terminal: 0,
   });
 
-  
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
@@ -82,7 +86,6 @@ export default function Dashboard() {
     fetchCounts();
   }, []);
 
-  
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -92,7 +95,7 @@ export default function Dashboard() {
           return;
         }
         const response = await axios.get(
-          'http://dts.sanjuancity.gov.ph/api/user', 
+          'http://dts.sanjuancity.gov.ph/api/user',
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -144,8 +147,7 @@ export default function Dashboard() {
         console.log('API error:', error.response.data);
         Alert.alert(
           'Logout Failed',
-          error.response.data.message ||
-            'An error occurred during logout.'
+          error.response.data.message || 'An error occurred during logout.'
         );
       } else {
         Alert.alert('Logout Failed', 'An error occurred. Please try again.');
@@ -155,8 +157,8 @@ export default function Dashboard() {
     }
   }
 
-  if(!fontsLoaded){
-    return <AppLoading/>; 
+  if (!fontsLoaded) {
+    return <AppLoading />;
   }
 
   const renderContent = () => {
@@ -193,6 +195,7 @@ export default function Dashboard() {
               </View>
             </View>
 
+           
             <View style={styles.card}>
               <View>
                 <Text style={styles.cardTitle}>FOR RELEASE</Text>
@@ -213,6 +216,7 @@ export default function Dashboard() {
               </View>
             </View>
 
+           
             <View style={styles.card}>
               <View>
                 <Text style={styles.cardTitle}>INCOMING</Text>
@@ -233,6 +237,7 @@ export default function Dashboard() {
               </View>
             </View>
 
+            
             <View style={styles.card}>
               <View>
                 <Text style={styles.cardTitle}>RECEIVED</Text>
@@ -253,6 +258,7 @@ export default function Dashboard() {
               </View>
             </View>
 
+           
             <View style={styles.card}>
               <View>
                 <Text style={styles.cardTitle}>TERMINAL</Text>
@@ -273,6 +279,7 @@ export default function Dashboard() {
               </View>
             </View>
 
+         
             <View style={styles.card}>
               <View>
                 <Text style={styles.cardTitle}>DRAFTS</Text>
@@ -306,6 +313,17 @@ export default function Dashboard() {
         );
       case 'list-of-users':
         return <ListOfUsers />;
+      case 'assign-qr':
+        return <QrGenerator />;
+      
+     
+      case 'my-documents':
+        return <MyDocuments />;
+      case 'received-documents':
+        return <ReceivedDocuments />;
+      case 'returned-documents':
+        return <ReturnedDocuments />;
+      
       default:
         return null;
     }
@@ -358,6 +376,7 @@ export default function Dashboard() {
       </View>
 
       <View style={styles.menuItems}>
+     
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => {
@@ -375,18 +394,60 @@ export default function Dashboard() {
           </View>
         </TouchableOpacity>
 
-       
-        <TouchableOpacity style={styles.menuItem}>
+     
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => setShowDocumentsSubMenu(!showDocumentsSubMenu)}
+        >
           <View style={styles.menuItemContent}>
             <MaterialCommunityIcons
               name="folder"
               size={20}
-              color="#228B22"
+              color="#228B22" 
             />
             <Text style={styles.menuText}>Documents</Text>
           </View>
+          <MaterialCommunityIcons
+            name={showDocumentsSubMenu ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color="#fff"
+          />
         </TouchableOpacity>
 
+        {/* Documents Submenu */}
+        {showDocumentsSubMenu && (
+          <View style={styles.subMenu}>
+            <TouchableOpacity
+              style={styles.subMenuItem}
+              onPress={() => {
+                setActiveTab('my-documents');
+                drawer.closeDrawer();
+              }}
+            >
+              <Text style={styles.subMenuText}>My Documents</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.subMenuItem}
+              onPress={() => {
+                setActiveTab('received-documents');
+                drawer.closeDrawer();
+              }}
+            >
+              <Text style={styles.subMenuText}>Received Documents</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.subMenuItem}
+              onPress={() => {
+                setActiveTab('returned-documents');
+                drawer.closeDrawer();
+              }}
+            >
+              <Text style={styles.subMenuText}>Returned Documents</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Pending for Release Menu Item */}
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
             <MaterialCommunityIcons
@@ -398,6 +459,7 @@ export default function Dashboard() {
           </View>
         </TouchableOpacity>
 
+        {/* Incoming Documents Menu Item */}
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
             <MaterialCommunityIcons
@@ -409,6 +471,7 @@ export default function Dashboard() {
           </View>
         </TouchableOpacity>
 
+        {/* Tagged as Terminal Menu Item */}
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.menuItemContent}>
             <MaterialCommunityIcons
@@ -420,6 +483,7 @@ export default function Dashboard() {
           </View>
         </TouchableOpacity>
 
+        {/* My Profile Menu Item */}
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => {
@@ -437,9 +501,10 @@ export default function Dashboard() {
           </View>
         </TouchableOpacity>
 
-        
+        {/* Conditional: Super Admin Submenus */}
         {userData && userData.user_level === 'Super Admin' && (
           <>
+            {/* List / Register User Submenu */}
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => setShowUserSubMenu(!showUserSubMenu)}
@@ -482,7 +547,11 @@ export default function Dashboard() {
               </View>
             )}
 
-            <TouchableOpacity style={styles.menuItem}>
+            {/* QR Manager Menu Item */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setShowQRSubMenu(!showQRSubMenu)}
+            >
               <View style={styles.menuItemContent}>
                 <MaterialCommunityIcons
                   name="qrcode"
@@ -491,11 +560,32 @@ export default function Dashboard() {
                 />
                 <Text style={styles.menuText}>QR Manager</Text>
               </View>
+              <MaterialCommunityIcons
+                name={showQRSubMenu ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#fff"
+              />
             </TouchableOpacity>
+
+            {/* QR Manager Submenu */}
+            {showQRSubMenu && (
+              <View style={styles.subMenu}>
+                <TouchableOpacity
+                  style={styles.subMenuItem}
+                  onPress={() => {
+                    setActiveTab('assign-qr');
+                    drawer.closeDrawer();
+                  }}
+                >
+                  <Text style={styles.subMenuText}>Assign QR</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
       </View>
 
+      {/* Logout Button */}
       <TouchableOpacity
         style={styles.logoutButton}
         onPress={handleLogout}
@@ -521,6 +611,7 @@ export default function Dashboard() {
       renderNavigationView={navigationView}
     >
       <View style={styles.container}>
+        {/* Header */}
         <View style={styles.headerContainer}>
           <TouchableOpacity onPress={() => drawer.openDrawer()}>
             <MaterialCommunityIcons name="menu" size={36} color="#fff" />
@@ -538,7 +629,10 @@ export default function Dashboard() {
           </View>
         </View>
 
+        {/* Main Content */}
         {renderContent()}
+
+        {/* Bottom Navigation Bar */}
         {renderBottomNavBar()}
       </View>
     </DrawerLayoutAndroid>
@@ -601,14 +695,14 @@ const styles = StyleSheet.create({
   },
   cardCount: {
     fontSize: 36,
-    fontFamily: 'OpenSans-Bold', 
+    fontFamily: 'OpenSans-Bold',
     color: '#333',
     marginBottom: 5,
   },
   cardSubtitle: {
     fontSize: 16,
     color: '#666',
-    fontFamily: 'OpenSans-Regular'
+    fontFamily: 'OpenSans-Regular',
   },
   iconBackground: {
     width: 70,
@@ -647,7 +741,6 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginBottom: 50,
-
   },
   logoImage: {
     width: 150,
@@ -682,6 +775,7 @@ const styles = StyleSheet.create({
   subMenuText: {
     color: '#fff',
     fontSize: 14,
+    paddingVertical: 5, // Added padding for better touch area
   },
   logoutButton: {
     backgroundColor: '#D9534F',

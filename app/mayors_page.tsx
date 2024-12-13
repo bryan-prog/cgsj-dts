@@ -13,7 +13,7 @@ const MayorsPage = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Welcome to the Mayor's Page</Text>
-      <Text style={styles.body}>This page is only accessible to users with the 'City Mayor' designation.</Text>
+      <Text style={styles.body}>This page is only accessible for Mayor Francis Javier Zamora</Text>
       
       <Button title="Logout" onPress={handleLogout} />
     </View>
